@@ -1,0 +1,10 @@
+{
+    "autoload": {
+        "classmap": [
+            "app/Services"
+        ]
+    },
+    "require": {
+        "google/apiclient": "^2.0"
+    }
+}
