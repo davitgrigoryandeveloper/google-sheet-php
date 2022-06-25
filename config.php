@@ -6,7 +6,7 @@ use DevCoder\DotEnv;
 use DevCoder\SpreadsheetSnippets;
 
 if (php_sapi_name() != 'cli') {
-    throw new Exception('This application must be run on the command line.');
+    die('This application must be run on the command line.');
 }
 
 (new DotEnv(__DIR__ . '/.env'))->load();
@@ -25,19 +25,17 @@ try {
     $sql = "CREATE TABLE IF NOT EXISTS cron_job (
         id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         last_working_cron_job TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)";
-
-    // use exec() because no results are returned
     $conn->exec($sql);
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
+$resultColumns = [];
 
 $sqlCronJob = $conn->prepare("SELECT * FROM cron_job LIMIT 1");
 $sqlCronJob->execute();
 $sqlCronJob->setFetchMode(PDO::FETCH_ASSOC);
 $oldCronJob = $sqlCronJob->fetch();
 
-$resultColumns = [];
 // Get data from users
 if ($oldCronJob) {
     $dataCron = $oldCronJob['last_working_cron_job'];
@@ -52,8 +50,7 @@ if ($oldCronJob) {
 $stmt->execute();
 $result = $stmt->fetchAll(PDO::FETCH_NUM);
 
-// if users table exist and $oldCronJob ka update anel isk ete chka insert anel
-if ($oldCronJob) {
+if ($oldCronJob) { // if $oldCronJob exist UPDATE cron_job table else INSERT
     $id = $oldCronJob['id'];
     $sqlCron = "UPDATE cron_job SET last_working_cron_job = CURRENT_TIMESTAMP WHERE id = $id";
 } else {
@@ -79,18 +76,14 @@ $valuesUsers = $result;
 
 $serviceSheet = new SpreadsheetSnippets($service);
 
-if ($oldCronJob) { // update
+if ($oldCronJob) { // update Google Sheet
     foreach ($valuesUsers as $key => $value) {
         $range = 'A' . $value[0] + 1;
         $serviceSheet->batchUpdateValues($spreadsheetId, $range, $valueInputOption, [$value]);
     }
-} else { // append
+} else { // append Google Sheet
     $range = "A1";
     $columnsUsers = [$resultColumns];
     $serviceSheet->appendValues($spreadsheetId, $range, $valueInputOption, $columnsUsers);
     $serviceSheet->appendValues($spreadsheetId, $range, $valueInputOption, $valuesUsers);
 }
-
-//$serviceSheet->appendValues($spreadsheetId, "A1:B1", $valueInputOption, $valuesUsers);
-
-//$getColumns = $serviceSheet->getValues($spreadsheetId, 'A1:C1');
